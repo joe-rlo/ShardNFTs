@@ -13,7 +13,7 @@ jobs:
     needs: [test]
     runs-on: ubuntu-latest
     env:
-      NEAR_CONTRACT_PR_STAGING_ACCOUNT_ID: gh-${{ github.event.number }}.${{ vars.NEAR_CONTRACT_STAGING_ACCOUNT_ID }}
+      NEAR_CONTRACT_PR_STAGING_ACCOUNT_ID: gh-${{ github.event.number }}-${{ vars.NEAR_CONTRACT_STAGING_ACCOUNT_ID }}
 
     steps:
       - name: Checkout repository
