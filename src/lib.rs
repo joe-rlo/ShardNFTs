@@ -55,29 +55,29 @@ impl CompressedNFTContract {
             leaf.owner,
             "Only the owner can transfer the NFT"
         );
-
+    
         let mut current_hash = env::sha256(&borsh::to_vec(&leaf).unwrap());
-
-        for p in proof {
-            if current_hash <= p {
-                current_hash = env::sha256(&[current_hash, p].concat()).to_vec();
+    
+        for p in &proof {
+            if current_hash <= *p {
+                current_hash = env::sha256(&[current_hash, p.to_vec()].concat()).to_vec();
             } else {
-                current_hash = env::sha256(&[p, current_hash].concat()).to_vec();
+                current_hash = env::sha256(&[p.to_vec(), current_hash].concat()).to_vec();
             }
         }
-
+    
         assert_eq!(
             current_hash,
             self.merkle_tree.get(&nft_id).unwrap(),
             "Invalid Merkle proof"
         );
-
+    
         let new_leaf = NFTLeaf {
             nft_id: nft_id.clone(),
             owner: new_owner,
             metadata: leaf.metadata,
         };
-
+    
         self.update_merkle_tree(new_leaf, proof);
     }
 
