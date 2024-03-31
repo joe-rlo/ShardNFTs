@@ -1,7 +1,7 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::UnorderedMap;
-use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault};
 use near_sdk::serde::{Deserialize, Serialize};
+use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault};
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 pub struct NFTLeaf {
@@ -50,7 +50,11 @@ impl CompressedNFTContract {
 
     pub fn transfer_nft(&mut self, nft_id: String, new_owner: AccountId, proof: Vec<Vec<u8>>) {
         let leaf = self.get_leaf(nft_id.clone()).expect("NFT not found");
-        assert_eq!(env::predecessor_account_id(), leaf.owner, "Only the owner can transfer the NFT");
+        assert_eq!(
+            env::predecessor_account_id(),
+            leaf.owner,
+            "Only the owner can transfer the NFT"
+        );
 
         let mut current_hash = env::sha256(&borsh::to_vec(&leaf).unwrap());
 
