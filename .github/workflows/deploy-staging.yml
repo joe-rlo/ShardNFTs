@@ -41,8 +41,6 @@ jobs:
             without-init-call \
             network-config "${{ vars.NEAR_CONTRACT_STAGING_NETWORK }}" \
             sign-with-plaintext-private-key \
-              --signer-public-key "${{ vars.NEAR_CONTRACT_STAGING_ACCOUNT_PUBLIC_KEY }}" \
-              --signer-private-key "${{ secrets.NEAR_CONTRACT_STAGING_ACCOUNT_PRIVATE_KEY }}" \
             send
 
       - name: Comment on pull request
