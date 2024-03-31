@@ -27,6 +27,10 @@ impl CompressedNFTContract {
         }
     }
 
+    pub fn authorized_account(&self) -> AccountId {
+        self.authorized_account.clone()
+    }
+
     pub fn update_merkle_tree(&mut self, leaf: NFTLeaf, proof: Vec<Vec<u8>>) {
         assert_eq!(
             env::predecessor_account_id(),
@@ -45,7 +49,9 @@ impl CompressedNFTContract {
             }
         }
 
+        let leaf_data = borsh::to_vec(&leaf).unwrap();
         self.merkle_tree.insert(&leaf.nft_id, &current_hash);
+        env::storage_write(current_hash.as_slice(), &leaf_data);
     }
 
     pub fn transfer_nft(&mut self, nft_id: String, new_owner: AccountId, proof: Vec<Vec<u8>>) {
@@ -82,9 +88,8 @@ impl CompressedNFTContract {
     }
 
     pub fn get_leaf(&self, nft_id: String) -> Option<NFTLeaf> {
-        self.merkle_tree.get(&nft_id).map(|hash| {
-            let data = env::storage_read(hash.as_slice()).unwrap();
-            borsh::from_slice(&data).unwrap()
+        self.merkle_tree.get(&nft_id).and_then(|hash| {
+            env::storage_read(hash.as_slice()).and_then(|data| borsh::from_slice(&data).ok())
         })
     }
 }
