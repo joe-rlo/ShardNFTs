@@ -1,7 +1,7 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::UnorderedMap;
-use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault};
+use near_sdk::serde::{Deserialize, Serialize};
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 pub struct NFTLeaf {
@@ -83,7 +83,7 @@ impl CompressedNFTContract {
 
     pub fn get_leaf(&self, nft_id: String) -> Option<NFTLeaf> {
         self.merkle_tree.get(&nft_id).map(|hash| {
-            let data = env::storage_read(&hash).unwrap();
+            let data = env::storage_read(hash.as_slice()).unwrap();
             borsh::from_slice(&data).unwrap()
         })
     }
