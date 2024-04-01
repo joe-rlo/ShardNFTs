@@ -1,50 +1,95 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{near_bindgen, AccountId, PanicOnDefault};
-use merkle::MerkleTree; //Not sure if this is the right library
+use near_sdk::collections::UnorderedMap;
+use near_sdk::serde::{Deserialize, Serialize};
+use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault};
+
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+pub struct NFTLeaf {
+    pub nft_id: String,
+    pub owner: AccountId,
+    pub metadata: String,
+}
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct CompressedNFTContract {
-    owner: AccountId,
-    merkle_root: Vec<u8>, 
+    merkle_tree: UnorderedMap<String, Vec<u8>>,
+    authorized_account: AccountId,
 }
 
 #[near_bindgen]
 impl CompressedNFTContract {
-    // Initialize the contract with the owner account and an initial Merkle root
     #[init]
-    pub fn new(owner: AccountId, merkle_root: Vec<u8>) -> Self {
-        assert!(!merkle_root.is_empty(), "Merkle root cannot be empty");
-        Self { owner, merkle_root }
+    pub fn new(authorized_account: AccountId) -> Self {
+        Self {
+            merkle_tree: UnorderedMap::new(b"m".to_vec()),
+            authorized_account,
+        }
     }
 
-    // Method to update the Merkle root, restricted to the contract owner
-    pub fn update_merkle_root(&mut self, new_merkle_root: Vec<u8>) {
+    pub fn authorized_account(&self) -> AccountId {
+        self.authorized_account.clone()
+    }
+
+    pub fn update_merkle_tree(&mut self, leaf: NFTLeaf, proof: Vec<Vec<u8>>) {
         assert_eq!(
-            near_sdk::env::signer_account_id(),
-            self.owner,
-            "Only the owner can update the Merkle root"
+            env::predecessor_account_id(),
+            self.authorized_account,
+            "Only authorized account can update the Merkle tree"
         );
-        self.merkle_root = new_merkle_root;
+
+        let leaf_hash = env::sha256(&borsh::to_vec(&leaf).unwrap());
+        let mut current_hash = leaf_hash.to_vec();
+
+        for p in proof {
+            if current_hash <= p {
+                current_hash = env::sha256(&[current_hash, p].concat()).to_vec();
+            } else {
+                current_hash = env::sha256(&[p, current_hash].concat()).to_vec();
+            }
+        }
+
+        let leaf_data = borsh::to_vec(&leaf).unwrap();
+        self.merkle_tree.insert(&leaf.nft_id, &current_hash);
+        env::storage_write(current_hash.as_slice(), &leaf_data);
     }
 
-    // Transfer method requiring a Merkle proof
-    pub fn transfer_nft(&mut self, receiver_id: AccountId, nft_id: String, merkle_proof: Vec<Vec<u8>>) {
-        // Logic to update the NFT's ownership state.
-       
-    }
-
-    pub fn update_merkle_root_after_mint(&mut self, new_merkle_root: Vec<u8>) {
-        // In a real scenario, this method would be protected and called by an authorized account
-        // after off-chain processing (e.g., the account that manages the off-chain indexer).
+    pub fn transfer_nft(&mut self, nft_id: String, new_owner: AccountId, proof: Vec<Vec<u8>>) {
+        let leaf = self.get_leaf(nft_id.clone()).expect("NFT not found");
         assert_eq!(
-            env::signer_account_id(),
-            self.owner,
-            "Only the owner can update the Merkle root"
+            env::predecessor_account_id(),
+            leaf.owner,
+            "Only the owner can transfer the NFT"
         );
-        self.merkle_root = new_merkle_root;
-        // Would need to log the mint event
+
+        let mut current_hash = env::sha256(&borsh::to_vec(&leaf).unwrap());
+
+        for p in &proof {
+            if current_hash <= *p {
+                current_hash = env::sha256(&[current_hash, p.to_vec()].concat()).to_vec();
+            } else {
+                current_hash = env::sha256(&[p.to_vec(), current_hash].concat()).to_vec();
+            }
+        }
+
+        assert_eq!(
+            current_hash,
+            self.merkle_tree.get(&nft_id).unwrap(),
+            "Invalid Merkle proof"
+        );
+
+        let new_leaf = NFTLeaf {
+            nft_id: nft_id.clone(),
+            owner: new_owner,
+            metadata: leaf.metadata,
+        };
+
+        self.update_merkle_tree(new_leaf, proof);
+    }
+
+    pub fn get_leaf(&self, nft_id: String) -> Option<NFTLeaf> {
+        self.merkle_tree.get(&nft_id).and_then(|hash| {
+            env::storage_read(hash.as_slice()).and_then(|data| borsh::from_slice(&data).ok())
+        })
     }
 }
-
-// TODOS: logic for Merkle proof verification, NFT state management, ... ????
