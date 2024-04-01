@@ -1,0 +1,20 @@
+{
+  "name": "indexer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "express": "^4.19.2",
+    "keccak256": "^1.0.6",
+    "merkletreejs": "^0.3.11",
+    "near-api-js": "^3.0.4",
+    "pg": "^8.11.4"
+  }
+}
