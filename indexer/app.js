@@ -1,8 +1,9 @@
 const express = require('express');
-const { connect, Contract, keyStores } = require('near-api-js');
+const { connect, KeyPair, keyStores, utils, WalletConnection, Contract} = require("near-api-js");
 const bodyParser = require('body-parser');
 const { MerkleTree } = require('merkletreejs');
 const keccak256 = require('keccak256');
+const { v4 } = require('uuid');
 
 // Configuration and Initialization
 const app = express();
@@ -10,18 +11,30 @@ const port = 3000;
 app.use(bodyParser.json());
 const db = require('./db');
 
+
+
+async function getContract(accountId) {
+    const myKeyStore = new keyStores.InMemoryKeyStore();
+const PRIVATE_KEY = "ed25519:xxxx";
+// creates a public / private key pair using the provided private key
+const keyPair = KeyPair.fromString(PRIVATE_KEY);
+// adds the keyPair you created to keyStore
+await myKeyStore.setKey("testnet", ".testnet", keyPair);
+
+
 // NEAR Configuration - Adjust as needed
 const NEAR_CONFIG = {
     networkId: "testnet",
-    contractName: "YOUR_CONTRACT_NAME.testnet",
-    keyStore: new keyStores.InMemoryKeyStore(),
+    contractName: "_______.testnet",
+    keyStore: myKeyStore,
     nodeUrl: "https://rpc.testnet.near.org",
     walletUrl: "https://wallet.testnet.near.org",
 };
 
-async function getContract(accountId) {
     const near = await connect(NEAR_CONFIG);
-    const account = await near.account(accountId);
+
+    const account = await near.account("_______.testnet");
+    
     return new Contract(account, NEAR_CONFIG.contractName, {
         viewMethods: ['get_leaf'],
         changeMethods: ['update_merkle_tree', 'transfer_nft'],
@@ -29,10 +42,11 @@ async function getContract(accountId) {
 }
 
 async function addNFTToDatabase(nft) {
-  const { nftId, owner, metadata } = nft;
+  const { nft_id, owner, metadata } = nft;
+  console.log(nft_id, owner, metadata);
   const res = await db.query(
     'INSERT INTO nfts (nft_id, owner, metadata) VALUES ($1, $2, $3) RETURNING *',
-    [nftId, owner, metadata]
+    [nft_id, owner, metadata]
   );
   return res.rows[0];
 }
@@ -64,7 +78,7 @@ async function addNFTMetadata(nftId, metadata) {
 
 async function getNFTMetadata(nftId) {
     const res = await db.query(
-      'SELECT title, description, media, animation_url, reference, cid FROM nft_metadata WHERE nft_id = $1',
+      'SELECT title, description, media, animation_url, reference, cid FROM nft_metadata WHERE  = $1',
       [nftId]
     );
     return res.rows[0]; // Assuming nft_id is unique, there should only be one row.
@@ -92,9 +106,10 @@ async function updateMerkleRootOnChain(accountId, leafData, proofData) {
 app.post('/mint-nft', async (req, res) => {
     const { metadataCid, ownerAccountId } = req.body; 
     try {
-        const nftId = uuid.v4(); 
+        const nftId = v4(); 
+        console.log(nftId);
         const leafData = { nft_id: nftId, owner: ownerAccountId, metadata: metadataCid };
-
+        console.log(leafData);
         await addNFTToDatabase(leafData);
 
         const newMerkleRoot = await recalculateMerkleTree(nftId);
@@ -114,7 +129,7 @@ app.post('/transfer-nft', async (req, res) => {
     const { accountId, nftId, newOwner, proof } = req.body;
     try {
         const contract = await getContract(accountId);
-        await contract.transfer_nft({ nft_id: nftId, new_owner: newOwner, proof });
+        await contract.transfer_nft({ nft_id: nftId, new_owner: newOwner, proof:[] });
         res.json({ success: true, message: 'NFT transferred successfully' });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });

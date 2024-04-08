@@ -43,3 +43,11 @@ you can create a standard for compressed NFTs on NEAR:
  - have off-chain indexer that maintains the actual state and can be used to construct these merkle paths
 
 I think this can be though even extension of existing NFT standard because you can add extra fields to NEAR methods but need wallets to get added
+
+
+## TODO:
+- proofs
+- mint through single minter (ShardDog)
+- transfer logic
+
+
