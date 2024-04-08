@@ -1,5 +1,5 @@
 const express = require('express');
-const { connect, Contract } = require('near-api-js');
+const { connect, Contract, keyStores } = require('near-api-js');
 const bodyParser = require('body-parser');
 const { MerkleTree } = require('merkletreejs');
 const keccak256 = require('keccak256');
@@ -28,7 +28,6 @@ async function getContract(accountId) {
     });
 }
 
-
 async function addNFTToDatabase(nft) {
   const { nftId, owner, metadata } = nft;
   const res = await db.query(
@@ -38,13 +37,11 @@ async function addNFTToDatabase(nft) {
   return res.rows[0];
 }
 
-
 async function getAllNFTData() {
     const res = await db.query('SELECT nft_id FROM nfts');
     return res.rows.map(row => row.nft_id);
 }
   
-
 async function recalculateMerkleTree(newNftId) {
     const nfts = await getAllNFTData();
     nfts.push(newNftId);
@@ -63,7 +60,7 @@ async function addNFTMetadata(nftId, metadata) {
       [nftId, title, description, media, animation_url, reference, cid]
     );
     return res.rows[0];
-  }
+}
 
 async function getNFTMetadata(nftId) {
     const res = await db.query(
@@ -92,7 +89,7 @@ async function updateMerkleRootOnChain(accountId, leafData, proofData) {
 }
 
   // API Endpoints
-  app.post('/mint-nft', async (req, res) => {
+app.post('/mint-nft', async (req, res) => {
     const { metadataCid, ownerAccountId } = req.body; 
     try {
         const nftId = uuid.v4(); 
@@ -112,7 +109,6 @@ async function updateMerkleRootOnChain(accountId, leafData, proofData) {
         res.status(500).json({ success: false, error: error.message });
     }
 });
-
 
 app.post('/transfer-nft', async (req, res) => {
     const { accountId, nftId, newOwner, proof } = req.body;
