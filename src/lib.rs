@@ -15,9 +15,7 @@ use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use anyhow::Error;
 
-
-
-impl Hasher for Sha256Algorithm {
+impl Hasher for Sha256Digest {
     fn write(&mut self, _bytes: &[u8]) {
         // Implement this method to update the hasher with the provided bytes
     }
@@ -32,11 +30,11 @@ impl Hasher for Sha256Algorithm {
     }
 }
 
-pub struct Sha256Algorithm {
+pub struct Sha256Digest {
     data: [u8; 32],
 }
 
-impl Algorithm<[u8; 32]> for Sha256Algorithm {
+impl Algorithm<[u8; 32]> for Sha256Digest {
     fn hash(&mut self) -> [u8; 32] {
         let mut hasher = Sha256::new();
         hasher.update(&self.data);
@@ -45,9 +43,9 @@ impl Algorithm<[u8; 32]> for Sha256Algorithm {
     }
 }
 
-impl Default for Sha256Algorithm {
+impl Default for Sha256Digest {
     fn default() -> Self {
-        Sha256Algorithm {
+        Sha256Digest {
             data: [0; 32], // Default value for data
         }
     }
@@ -70,7 +68,7 @@ impl CompressedNFTContract {
         }
     }
 
-    pub fn get_merkle_tree(&self) -> MerkleTree<[u8; 32], Sha256Algorithm, VecStore<[u8; 32]>> {
+    pub fn get_merkle_tree(&self) -> MerkleTree<[u8; 32], Sha256Digest, VecStore<[u8; 32]>> {
         MerkleTree::from_data(&self.merkle_tree_data).unwrap()
     }
 
@@ -109,7 +107,7 @@ impl CompressedNFTContract {
     fn verify_merkle_proof(&self, _nft_id: &str, proof: Result<Proof<[u8; 32], BaseTreeArity>, Error>) -> bool {
         match proof {
             Ok(proof) => {
-                proof.validate::<Sha256Algorithm>().unwrap_or(false)
+                proof.validate::<Sha256Digest>().unwrap_or(false)
             },
             Err(_) => false,
         }
