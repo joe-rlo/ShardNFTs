@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use near_sdk::{near_bindgen, AccountId, env};
+use near_sdk::{AccountId, env};
 use near_sdk::require;
 use merkletree::merkle::MerkleTree;
 use merkletree::store::VecStore;
@@ -12,8 +12,9 @@ use merkletree::proof::Proof;
 use typenum::U2;
 type BaseTreeArity = U2;
 use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
 use anyhow::Error;
+
+use near_sdk::near;
 
 impl Hasher for Sha256Digest {
     fn write(&mut self, _bytes: &[u8]) {
@@ -51,16 +52,16 @@ impl Default for Sha256Digest {
     }
 }
 
-#[near_bindgen]
-#[derive(Serialize, Deserialize)]
+#[near]
+#[derive(Default)]
 pub struct CompressedNFTContract {
-    owner: AccountId,
+    owner: Option<AccountId>,
     merkle_tree_data: Vec<[u8; 32]>,
     nft_owners: HashMap<String, AccountId>,
 }
 
 impl CompressedNFTContract {
-    pub fn new(owner: AccountId, merkle_tree_data: Vec<[u8; 32]>) -> Self {
+    pub fn new(owner: Option<AccountId>, merkle_tree_data: Vec<[u8; 32]>) -> Self {
         Self {
             owner,
             merkle_tree_data,
@@ -75,7 +76,7 @@ impl CompressedNFTContract {
     // Method to update the Merkle root, restricted to the contract owner
     pub fn update_merkle_root(&mut self, new_merkle_root: [u8; 32]) {
         require!(
-            env::signer_account_id() == self.owner,
+            env::signer_account_id() == *self.owner.as_ref().unwrap(),
             "Only the owner can update the Merkle root"
         );
         self.merkle_tree_data = vec![new_merkle_root];
@@ -93,7 +94,7 @@ impl CompressedNFTContract {
         // In a real scenario, this method would be protected and called by an authorized account
         // after off-chain processing (e.g., the account that manages the off-chain indexer).
         require!(
-            env::signer_account_id() == self.owner,
+            env::signer_account_id() == *self.owner.as_ref().unwrap(),
             "Only the owner can update the Merkle root"
         );
     
